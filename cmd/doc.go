@@ -35,7 +35,7 @@
 //             set bind address for the HTTP server
 //     -log=0
 //             set log level
-//     -fs-base-dir="" 
+//     -fs-base-dir=""
 //             file system base dir
 //     -aws-access-key-id=""
 //             AWS access key id
