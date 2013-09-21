@@ -1,7 +1,17 @@
 imgfilter
-#########
+=========
 
-imgfilter is an image filter HTTP server used to dynamically resize images.
+imgfilter is an image filter HTTP server used to dynamically
+resize images. It depends on Herbert G. Fischer's
+ImageMagick wrapper.
+
+Install dependencies
+--------------------
+
+Debian
+
+    apt-get install libmagickwand-dev
+
 
 Resize Image
 ------------
