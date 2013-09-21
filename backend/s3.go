@@ -7,7 +7,7 @@ import (
 
 // S3 is an Amazon S3 implementation of the ImageBackend
 type S3 struct {
-	b *s3.Bucket	
+	b *s3.Bucket
 }
 
 func NewS3(access, secret, region, bucket string) *S3 {

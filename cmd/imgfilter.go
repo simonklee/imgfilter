@@ -74,7 +74,7 @@ func main() {
 	var imgBackend backend.ImageBackend
 
 	if *fsBaseDir != "" {
-		imgBackend = backend.NewFileSystem(*fsBaseDir)
+		imgBackend = backend.Dir(*fsBaseDir)
 	} else if *awsAccessKeyId != "" && *awsSecretAccessKey != "" && *awsRegion != "" && *awsBucket != "" {
 		imgBackend = backend.NewS3(*awsAccessKeyId, *awsSecretAccessKey, *awsRegion, *awsBucket)
 	} else {

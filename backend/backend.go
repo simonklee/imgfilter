@@ -24,7 +24,7 @@ package backend
 
 type ImageBackend interface {
 	// ReadFile reads the file named by filename and returns the contents.
-    // A successful call returns err == nil, not err == EOF. Because ReadFile
+	// A successful call returns err == nil, not err == EOF. Because ReadFile
 	// reads the whole file, it does not treat an EOF from Read as an error
 	// to be reported.
 	ReadFile(filename string) ([]byte, error)

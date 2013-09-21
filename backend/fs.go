@@ -1,21 +1,26 @@
 package backend
 
 import (
+	"errors"
 	"io/ioutil"
+	"path"
 	"path/filepath"
+	"strings"
 )
 
-// FileSystem is a file system implementation of the ImageBackend
-type FileSystem struct {
-	basepath string
-}
+// Dir implementation the ImageBackend
+type Dir string
 
-func NewFileSystem(basepath string) *FileSystem {
-	return &FileSystem {
-		basepath: basepath,
+func (d Dir) ReadFile(name string) ([]byte, error) {
+	if filepath.Separator != '/' && strings.IndexRune(name, filepath.Separator) >= 0 || strings.Contains(name, "\x00") {
+		return nil, errors.New("http: invalid character in file path")
 	}
-}
 
-func (fs *FileSystem) ReadFile(filename string) ([]byte, error) {
-	return ioutil.ReadFile(filepath.Join(fs.basepath, filename))
+	dir := string(d)
+
+	if dir == "" {
+		dir = "."
+	}
+
+	return ioutil.ReadFile(filepath.Join(dir, filepath.FromSlash(path.Clean("/"+name))))
 }
