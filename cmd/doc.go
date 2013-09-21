@@ -35,12 +35,16 @@
 //             set bind address for the HTTP server
 //     -log=0
 //             set log level
+//     -fs-base-dir="" 
+//             file system base dir
 //     -aws-access-key-id=""
 //             AWS access key id
-//	   -aws-secret-access-key=""
+//     -aws-secret-access-key=""
 //             AWS secret access key
-//	   -aws-region=""
+//     -aws-region=""
 //             AWS region
+//     -aws-bucket=""
+//             AWS bucket
 //     -version=false
 //             display version number and exit
 //     -debug.cpuprofile=""

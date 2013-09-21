@@ -13,6 +13,38 @@ Debian
     apt-get install libmagickwand-dev
 
 
+Usage
+-----
+
+Usage:
+
+    imgfilter [flag]
+
+The flags are:
+
+     -v
+             verbose mode
+     -h
+             help text
+     -http=":8080"
+             set bind address for the HTTP server
+     -log=0
+             set log level
+     -fs-base-dir="" 
+             file system base dir
+     -aws-access-key-id=""
+             AWS access key id
+     -aws-secret-access-key=""
+             AWS secret access key
+     -aws-region=""
+             AWS region
+     -aws-bucket=""
+             AWS bucket
+     -version=false
+             display version number and exit
+     -debug.cpuprofile=""
+             run cpu profiler
+
 Resize Image
 ------------
 
