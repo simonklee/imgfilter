@@ -23,32 +23,40 @@
 package image
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/gographics/imagick/imagick"
+	"github.com/simonz05/imgfilter/util"
 )
 
-var maxOutputSize uint = 2000
-
 type image struct {
-	mw *imagick.MagickWand
+	mw        *imagick.MagickWand
+	w, h      uint
+	direction string
 }
 
 func newImageFromBlob(blob []byte) (*image, error) {
 	im := new(image)
 	imagick.Initialize()
+
 	im.mw = imagick.NewMagickWand()
-	return im, im.mw.ReadImageBlob(blob)
+	err := im.mw.ReadImageBlob(blob)
+
+	if err != nil {
+		return im, err
+	}
+
+	im.w = im.mw.GetImageWidth()
+	im.h = im.mw.GetImageHeight()
+	return im, nil
 }
 
+// Ensure that width and height does contain image.
 func (im *image) normalizeSize(width, height uint) (w, h uint) {
 	if width > height {
-		h = maxOutputSize * height / width
-		w = maxOutputSize
+		h = im.h * height / width
+		w = im.w
 	} else {
-		w = maxOutputSize * width / height
-		h = maxOutputSize
+		w = im.w * width / height
+		h = im.h
 	}
 
 	if w >= width && h >= height {
@@ -56,15 +64,50 @@ func (im *image) normalizeSize(width, height uint) (w, h uint) {
 		h = height
 	}
 
-	//// Get original image size
-	//oWidth := mw.GetImageWidth()
-	//oHeight := mw.GetImageHeight()
+	return
+}
 
-	//// Calculate new size
-	//hWidth := util.UintMin(width, oWidth)
-	//hHeight := util.UintMin(height, oHeight)
+// Ensure that x and y offsets does contain image.
+func (im *image) normalizeOffset(w, h uint, xOffset, yOffset int) (x int, y int) {
+	x, y = im.gravity(w, h)
+	x += xOffset
+	y += yOffset
+	x -= util.IntMax(0, x+int(w)-int(im.w))
+	y -= util.IntMax(0, y+int(h)-int(im.h))
+	return util.IntMax(0, x), util.IntMax(0, y)
+}
 
-	return w, h
+// Calculate x and y offset based on gravity. ImageMagick's SetImageGravity
+// function doesn't seem to work.
+func (im *image) gravity(w, h uint) (x, y int) {
+	switch im.direction {
+	case "northwest":
+		break
+	case "north":
+		x = int((im.w / 2) - (w / 2))
+	case "northeast":
+		x = int(im.w - w)
+	case "west":
+		y = int((im.h / 2) - (h / 2))
+	case "east":
+		x = int(im.w - w)
+		y = int((im.h / 2) - (h / 2))
+	case "southwest":
+		y = int(im.h - h)
+	case "south":
+		x = int((im.w / 2) - (w / 2))
+		y = int(im.h - h)
+	case "southeast":
+		x = int(im.w - w)
+		y = int(im.h - h)
+	case "center":
+		x = int((im.w / 2) - (w / 2))
+		y = int((im.h / 2) - (h / 2))
+	default:
+		x = int((im.w / 2) - (w / 2))
+		y = int((im.h / 2) - (h / 2))
+	}
+	return
 }
 
 func (im *image) destroy() {
@@ -73,11 +116,9 @@ func (im *image) destroy() {
 }
 
 func (im *image) resize(width, height uint) error {
-	if err := im.mw.SetGravity(imagick.GRAVITY_CENTER); err != nil {
-		return err
-	}
+	w, h := im.normalizeSize(width, height)
 
-	if err := im.mw.ResizeImage(width, height, imagick.FILTER_LANCZOS, 1); err != nil {
+	if err := im.mw.ResizeImage(w, h, imagick.FILTER_LANCZOS, 1); err != nil {
 		return err
 	}
 
@@ -85,7 +126,10 @@ func (im *image) resize(width, height uint) error {
 }
 
 func (im *image) crop(width, height uint, x, y int) (err error) {
-	if err = im.mw.CropImage(width, height, x, y); err != nil {
+	w, h := im.normalizeSize(width, height)
+	x, y = im.normalizeOffset(w, h, x, y)
+
+	if err = im.mw.CropImage(w, h, x, y); err != nil {
 		return
 	}
 
@@ -96,19 +140,13 @@ func (im *image) crop(width, height uint, x, y int) (err error) {
 	return
 }
 
-func (im *image) transform(crop, resize string) error {
-	if mw1 := im.mw.TransformImage(crop, resize); mw1 == nil {
-		return errors.New("Image transformation failed")
-	}
-
-	return nil
-}
-
 // Set the compression quality (high quality = low compression)
 func (im *image) compress(level uint) error {
 	return im.mw.SetImageCompressionQuality(level)
 }
 
+// Resize formats an image according to width and height. It does not preserve
+// the aspect ratio of the image.
 func Resize(data []byte, width, height uint) ([]byte, error) {
 	im, err := newImageFromBlob(data)
 	defer im.destroy()
@@ -117,16 +155,15 @@ func Resize(data []byte, width, height uint) ([]byte, error) {
 		return nil, err
 	}
 
-	w, h := im.normalizeSize(width, height)
-
-	if err = im.resize(w, h); err != nil {
+	if err = im.resize(width, height); err != nil {
 		return nil, err
 	}
 
 	return im.mw.GetImageBlob(), nil
 }
 
-func Crop(data []byte, width, height uint, x, y int) ([]byte, error) {
+// Crop formats an image according to width and height.
+func Crop(data []byte, width, height uint, x, y int, direction string) ([]byte, error) {
 	im, err := newImageFromBlob(data)
 	defer im.destroy()
 
@@ -134,29 +171,9 @@ func Crop(data []byte, width, height uint, x, y int) ([]byte, error) {
 		return nil, err
 	}
 
-	w, h := im.normalizeSize(width, height)
+	im.direction = direction
 
-	if err = im.crop(w, h, x, y); err != nil {
-		return nil, err
-	}
-
-	return im.mw.GetImageBlob(), nil
-}
-
-func Transform(data []byte, resizeWidth, resizeHeight, cropWidth, cropHeight uint, x, y int) ([]byte, error) {
-	im, err := newImageFromBlob(data)
-	defer im.destroy()
-
-	if err != nil {
-		return nil, err
-	}
-
-	w, h := im.normalizeSize(resizeWidth, resizeHeight)
-
-	crop := fmt.Sprintf("%dx%d+%d+%d", cropWidth, cropHeight, x, y)
-	resize := fmt.Sprintf("%dx%d>", w, h)
-
-	if err = im.transform(crop, resize); err != nil {
+	if err = im.crop(width, height, x, y); err != nil {
 		return nil, err
 	}
 
