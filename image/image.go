@@ -23,54 +23,142 @@
 package image
 
 import (
-	"github.com/simonz05/imgfilter/util"
+	"errors"
+	"fmt"
+
 	"github.com/gographics/imagick/imagick"
 )
 
-func Resize(data []byte, width, height int) ([]byte, error) {
+var maxOutputSize uint = 2000
+
+type image struct {
+	mw *imagick.MagickWand
+}
+
+func newImageFromBlob(blob []byte) (*image, error) {
+	im := new(image)
 	imagick.Initialize()
-	defer imagick.Terminate()
-
-	mw := imagick.NewMagickWand()
-	defer mw.Destroy()
-
-	err := mw.ReadImageBlob(data)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Get original image size
-	oWidth := mw.GetImageWidth()
-	oHeight := mw.GetImageHeight()
-
-	// Calculate new size
-	hWidth := uint(util.IntMax(width, int(oWidth)))
-	hHeight := uint(util.IntMax(height, int(oHeight)))
-
-	// Resize the image using the Lanczos filter
-	// The blur factor is a float, where > 1 is blurry, < 1 is sharp
-	err = mw.ResizeImage(hWidth, hHeight, imagick.FILTER_LANCZOS, 1)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Set the compression quality to 95 (high quality = low compression)
-	err = mw.SetImageCompressionQuality(95)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return mw.GetImageBlob(), nil
+	im.mw = imagick.NewMagickWand()
+	return im, im.mw.ReadImageBlob(blob)
 }
 
-func Crop(data []byte) ([]byte, error) {
-	//err = mw.CropImage(200, 200, 0, 0)
-	return nil, nil
+func (im *image) normalizeSize(width, height uint) (w, h uint) {
+	if width > height {
+		h = maxOutputSize * height / width
+		w = maxOutputSize
+	} else {
+		w = maxOutputSize * width / height
+		h = maxOutputSize
+	}
+
+	if w >= width && h >= height {
+		w = width
+		h = height
+	}
+
+	//// Get original image size
+	//oWidth := mw.GetImageWidth()
+	//oHeight := mw.GetImageHeight()
+
+	//// Calculate new size
+	//hWidth := util.UintMin(width, oWidth)
+	//hHeight := util.UintMin(height, oHeight)
+
+	return w, h
 }
 
-func Thumbnail(data []byte) ([]byte, error) {
-	return nil, nil
+func (im *image) destroy() {
+	im.mw.Destroy()
+	imagick.Terminate()
+}
+
+func (im *image) resize(width, height uint) error {
+	if err := im.mw.SetGravity(imagick.GRAVITY_CENTER); err != nil {
+		return err
+	}
+
+	if err := im.mw.ResizeImage(width, height, imagick.FILTER_LANCZOS, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (im *image) crop(width, height uint, x, y int) (err error) {
+	if err = im.mw.CropImage(width, height, x, y); err != nil {
+		return
+	}
+
+	//if err = im.mw.ResetImagePage("0x0"); err != nil {
+	//	return
+	//}
+
+	return
+}
+
+func (im *image) transform(crop, resize string) error {
+	if mw1 := im.mw.TransformImage(crop, resize); mw1 == nil {
+		return errors.New("Image transformation failed")
+	}
+
+	return nil
+}
+
+// Set the compression quality (high quality = low compression)
+func (im *image) compress(level uint) error {
+	return im.mw.SetImageCompressionQuality(level)
+}
+
+func Resize(data []byte, width, height uint) ([]byte, error) {
+	im, err := newImageFromBlob(data)
+	defer im.destroy()
+
+	if err != nil {
+		return nil, err
+	}
+
+	w, h := im.normalizeSize(width, height)
+
+	if err = im.resize(w, h); err != nil {
+		return nil, err
+	}
+
+	return im.mw.GetImageBlob(), nil
+}
+
+func Crop(data []byte, width, height uint, x, y int) ([]byte, error) {
+	im, err := newImageFromBlob(data)
+	defer im.destroy()
+
+	if err != nil {
+		return nil, err
+	}
+
+	w, h := im.normalizeSize(width, height)
+
+	if err = im.crop(w, h, x, y); err != nil {
+		return nil, err
+	}
+
+	return im.mw.GetImageBlob(), nil
+}
+
+func Transform(data []byte, resizeWidth, resizeHeight, cropWidth, cropHeight uint, x, y int) ([]byte, error) {
+	im, err := newImageFromBlob(data)
+	defer im.destroy()
+
+	if err != nil {
+		return nil, err
+	}
+
+	w, h := im.normalizeSize(resizeWidth, resizeHeight)
+
+	crop := fmt.Sprintf("%dx%d+%d+%d", cropWidth, cropHeight, x, y)
+	resize := fmt.Sprintf("%dx%d>", w, h)
+
+	if err = im.transform(crop, resize); err != nil {
+		return nil, err
+	}
+
+	return im.mw.GetImageBlob(), nil
 }
