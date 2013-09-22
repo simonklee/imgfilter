@@ -27,14 +27,25 @@ import (
 	"github.com/simonz05/imgfilter/util"
 )
 
-type image struct {
+type Image struct {
 	mw        *imagick.MagickWand
 	w, h      uint
+	nW, nH    uint
 	direction string
 }
 
-func newImageFromBlob(blob []byte) (*image, error) {
-	im := new(image)
+// Create a new image from raw image source.
+//
+// Example
+//
+//		im, err := NewImageFromBlob(data)
+// 		defer im.Destroy()
+//
+// 		if err != nil {
+// 			return nil, err
+// 		}
+func NewImageFromBlob(blob []byte) (*Image, error) {
+	im := new(Image)
 	imagick.Initialize()
 
 	im.mw = imagick.NewMagickWand()
@@ -50,7 +61,7 @@ func newImageFromBlob(blob []byte) (*image, error) {
 }
 
 // Ensure that width and height does contain image.
-func (im *image) normalizeSize(width, height uint) (w, h uint) {
+func (im *Image) normalizeSize(width, height uint) (w, h uint) {
 	if width > height {
 		h = im.h * height / width
 		w = im.w
@@ -68,7 +79,7 @@ func (im *image) normalizeSize(width, height uint) (w, h uint) {
 }
 
 // Ensure that x and y offsets does contain image.
-func (im *image) normalizeOffset(w, h uint, xOffset, yOffset int) (x int, y int) {
+func (im *Image) normalizeOffset(w, h uint, xOffset, yOffset int) (x int, y int) {
 	x, y = im.gravity(w, h)
 	x += xOffset
 	y += yOffset
@@ -79,7 +90,7 @@ func (im *image) normalizeOffset(w, h uint, xOffset, yOffset int) (x int, y int)
 
 // Calculate x and y offset based on gravity. ImageMagick's SetImageGravity
 // function doesn't seem to work.
-func (im *image) gravity(w, h uint) (x, y int) {
+func (im *Image) gravity(w, h uint) (x, y int) {
 	switch im.direction {
 	case "northwest":
 		break
@@ -110,12 +121,29 @@ func (im *image) gravity(w, h uint) (x, y int) {
 	return
 }
 
-func (im *image) destroy() {
+// Free image resource. Always call this.
+func (im *Image) Destroy() {
 	im.mw.Destroy()
 	imagick.Terminate()
 }
 
-func (im *image) resize(width, height uint) error {
+// Return width
+func (im *Image) Width() uint {
+	return im.w
+}
+
+// Return height
+func (im *Image) Height() uint {
+	return im.h
+}
+
+// SetDirection sets the crop gravity direction
+func (im *Image) SetDirection(direction string) {
+	im.direction = direction
+}
+
+// Resize formats an image according to width and height.
+func (im *Image) Resize(width, height uint) error {
 	w, h := im.normalizeSize(width, height)
 
 	if err := im.mw.ResizeImage(w, h, imagick.FILTER_LANCZOS, 1); err != nil {
@@ -125,7 +153,8 @@ func (im *image) resize(width, height uint) error {
 	return nil
 }
 
-func (im *image) crop(width, height uint, x, y int) (err error) {
+// Crop formats an image according to width and height.
+func (im *Image) Crop(width, height uint, x, y int) (err error) {
 	w, h := im.normalizeSize(width, height)
 	x, y = im.normalizeOffset(w, h, x, y)
 
@@ -141,21 +170,21 @@ func (im *image) crop(width, height uint, x, y int) (err error) {
 }
 
 // Set the compression quality (high quality = low compression)
-func (im *image) compress(level uint) error {
+func (im *Image) Compress(level uint) error {
 	return im.mw.SetImageCompressionQuality(level)
 }
 
 // Resize formats an image according to width and height. It does not preserve
 // the aspect ratio of the image.
 func Resize(data []byte, width, height uint) ([]byte, error) {
-	im, err := newImageFromBlob(data)
-	defer im.destroy()
+	im, err := NewImageFromBlob(data)
+	defer im.Destroy()
 
 	if err != nil {
 		return nil, err
 	}
 
-	if err = im.resize(width, height); err != nil {
+	if err = im.Resize(width, height); err != nil {
 		return nil, err
 	}
 
@@ -164,8 +193,8 @@ func Resize(data []byte, width, height uint) ([]byte, error) {
 
 // Crop formats an image according to width and height.
 func Crop(data []byte, width, height uint, x, y int, direction string) ([]byte, error) {
-	im, err := newImageFromBlob(data)
-	defer im.destroy()
+	im, err := NewImageFromBlob(data)
+	defer im.Destroy()
 
 	if err != nil {
 		return nil, err
@@ -173,7 +202,7 @@ func Crop(data []byte, width, height uint, x, y int, direction string) ([]byte, 
 
 	im.direction = direction
 
-	if err = im.crop(width, height, x, y); err != nil {
+	if err = im.Crop(width, height, x, y); err != nil {
 		return nil, err
 	}
 
