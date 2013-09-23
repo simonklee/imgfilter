@@ -15,6 +15,12 @@ type ResizeCase struct {
 	w, h     uint
 }
 
+type ThumbnailCase struct {
+	filename  string
+	w, h      uint
+	direction string
+}
+
 type CropCase struct {
 	filename  string
 	w, h      uint
@@ -55,6 +61,46 @@ func TestResize(t *testing.T) {
 		}
 	}
 }
+
+func TestThumbnail(t *testing.T) {
+	imagick.Initialize()
+	defer imagick.Terminate()
+
+	tests := []*ThumbnailCase{
+		{"fixture/circle.png", 400, 400, "north"},
+		{"fixture/circle.png", 300, 300, "north"},
+		{"fixture/circle.png", 400, 200, "north"},
+		{"fixture/circle.png", 400, 200, "north"},
+		{"fixture/circle.png", 200, 400, "north"},
+		{"fixture/circle.png", 800, 200, "center"},
+	}
+
+	if err := os.Mkdir("test-out", os.ModeDir|os.ModePerm); os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+
+	for i, x := range tests {
+		before, err := ioutil.ReadFile(x.filename)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		after, err := Thumbnail(before, x.w, x.h, x.direction)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		filename := fmt.Sprintf("test-out/thumbnail-%dx%d-%s-%d%s", x.w, x.h, x.direction, i, filepath.Ext(x.filename))
+		err = ioutil.WriteFile(filename, after, os.ModePerm)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestCrop(t *testing.T) {
 	imagick.Initialize()
 	defer imagick.Terminate()

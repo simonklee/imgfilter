@@ -121,6 +121,24 @@ func (im *Image) gravity(w, h uint) (x, y int) {
 	return
 }
 
+// cropSize computes a crop area for making thumbnail images.
+func (im *Image) cropSize(width, height uint) (uint, uint) {
+	fWidth := float64(width)
+	fHeight := float64(height)
+	fx := float64(im.w) / fWidth
+	fy := float64(im.h) / fHeight
+
+	var ratio float64
+
+	if fx < fy {
+		ratio = fx
+	} else {
+		ratio = fy
+	}
+
+	return uint(fWidth * ratio), uint(fHeight * ratio)
+}
+
 // Free image resource. Always call this.
 func (im *Image) Destroy() {
 	im.mw.Destroy()
@@ -169,6 +187,23 @@ func (im *Image) Crop(width, height uint, x, y int) (err error) {
 	return
 }
 
+// Thumbnail fits an image to a given size. It first calls crop, then resize.
+func (im *Image) Thumbnail(width, height uint, x, y int) (err error) {
+	w, h := im.normalizeSize(width, height)
+	cw, ch := im.cropSize(w, h)
+	x, y = im.normalizeOffset(cw, ch, x, y)
+
+	if err = im.mw.CropImage(cw, ch, x, y); err != nil {
+		return
+	}
+
+	if err = im.mw.ResizeImage(w, h, imagick.FILTER_LANCZOS, 1); err != nil {
+		return
+	}
+
+	return
+}
+
 // Set the compression quality (high quality = low compression)
 func (im *Image) Compress(level uint) error {
 	return im.mw.SetImageCompressionQuality(level)
@@ -203,6 +238,24 @@ func Crop(data []byte, width, height uint, x, y int, direction string) ([]byte, 
 	im.direction = direction
 
 	if err = im.Crop(width, height, x, y); err != nil {
+		return nil, err
+	}
+
+	return im.mw.GetImageBlob(), nil
+}
+
+// Thumbnail fits an image to a given size. It first calls Crop, then Resize.
+func Thumbnail(data []byte, width, height uint, direction string) ([]byte, error) {
+	im, err := NewImageFromBlob(data)
+	defer im.Destroy()
+
+	if err != nil {
+		return nil, err
+	}
+
+	im.SetDirection(direction)
+
+	if err = im.Thumbnail(width, height, 0, 0); err != nil {
 		return nil, err
 	}
 
