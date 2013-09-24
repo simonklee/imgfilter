@@ -20,7 +20,7 @@ var (
 	logLevel           = flag.Int("log", 0, "set log level")
 	version            = flag.Bool("version", false, "show version number and exit")
 	fsBaseDir          = flag.String("fs-base-dir", "", "file system base dir")
-	awsAccessKeyId     = flag.String("aws-secret-access-key", "", "AWS access key id")
+	awsAccessKeyId     = flag.String("aws-access-key-id", "", "AWS access key id")
 	awsSecretAccessKey = flag.String("aws-secret-access-key", "", "AWS secret access key")
 	awsRegion          = flag.String("aws-region", "", "AWS region")
 	awsBucket          = flag.String("aws-bucket", "", "AWS bucket")
