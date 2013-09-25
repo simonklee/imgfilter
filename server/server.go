@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	router *mux.Router
+	router       *mux.Router
 	imageBackend backend.ImageBackend
 )
 
@@ -56,9 +56,9 @@ func setupServer(b backend.ImageBackend) error {
 	imageBackend = b
 
 	router = mux.NewRouter()
-	router.HandleFunc("/crop/{size:.*}/{filename:.*.((?i)jpeg|jpg|png)}", cropHandle).Methods("GET").Name("crop")
-	router.HandleFunc("/resize/{size:.*}/{filename:.*.((?i)jpeg|jpg|png)}", resizeHandle).Methods("GET").Name("resize")
-	router.HandleFunc("/thumbnail/{fileinfo:.*}", thumbnailHandle).Methods("GET").Name("thumbnail")
+	router.HandleFunc("/crop/{fileinfo:.*}", makeHandler(NewCropFilter())).Methods("GET").Name("thumbnail")
+	router.HandleFunc("/resize/{fileinfo:.*}", makeHandler(NewResizeFilter())).Methods("GET").Name("thumbnail")
+	router.HandleFunc("/thumbnail/{fileinfo:.*}", makeHandler(NewThumbnailFilter())).Methods("GET").Name("thumbnail")
 	router.StrictSlash(false)
 	http.Handle("/", router)
 
