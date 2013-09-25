@@ -20,15 +20,33 @@ var (
 	thumbnailRe = regexp.MustCompile("([0-9]+)x([0-9]+)(/(northwest|northeast|southwest|southeast|north|west|south|east|center))?(.+)")
 )
 
+type FileInfo struct {
+	width, height uint
+	x, y          int
+	direction     string
+	filepath      string
+}
+
+func (f *FileInfo) String() string {
+	return fmt.Sprintf("%dx%d+%d+%d:%s\n%s", f.width, f.height, f.x, f.y, f.direction, f.filepath)
+}
+
+func validContentType(mime string) error {
+	if mime == "image/png" || mime == "image/jpeg" {
+		return nil
+	}
+	return errors.New("Invalid MIME type")
+}
+
+func writeError(w http.ResponseWriter, err string, statusCode int) {
+	util.Logf("err: %v", err)
+	w.WriteHeader(statusCode)
+	w.Write([]byte(err))
+}
+
 type ImageFilter interface {
 	SizeParser(string) (*FileInfo, error)
 	Filter([]byte, *FileInfo) ([]byte, error)
-}
-
-func makeHandler(im ImageFilter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		imageHandle(w, r, im)
-	}
 }
 
 type ThumbnailFilter struct {
@@ -86,7 +104,6 @@ func NewCropFilter() *CropFilter {
 // parseThumbnail validates the file info for a thumbnail.
 func (t *CropFilter) SizeParser(v string) (f *FileInfo, err error) {
 	result := t.re.FindStringSubmatch(v)
-	fmt.Println("res", result, len(result))
 
 	if len(result) != 9 {
 		err = errors.New("string mismatch")
@@ -167,30 +184,6 @@ func (t *ResizeFilter) Filter(data []byte, f *FileInfo) ([]byte, error) {
 	return image.Resize(data, f.width, f.height)
 }
 
-type FileInfo struct {
-	width, height uint
-	x, y          int
-	direction     string
-	filepath      string
-}
-
-func (f *FileInfo) String() string {
-	return fmt.Sprintf("%dx%d+%d+%d:%s\n%s", f.width, f.height, f.x, f.y, f.direction, f.filepath)
-}
-
-func validContentType(mime string) error {
-	if mime == "image/png" || mime == "image/jpeg" {
-		return nil
-	}
-	return errors.New("Invalid MIME type")
-}
-
-func writeError(w http.ResponseWriter, err string, statusCode int) {
-	util.Logf("err: %v", err)
-	w.WriteHeader(statusCode)
-	w.Write([]byte(err))
-}
-
 func imageHandle(w http.ResponseWriter, r *http.Request, f ImageFilter) {
 	start := time.Now()
 	m := mux.Vars(r)
@@ -227,6 +220,7 @@ func imageHandle(w http.ResponseWriter, r *http.Request, f ImageFilter) {
 	}
 
 	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Content-Length", strconv.Itoa(len(thumb)))
 	w.Write(thumb)
 	util.Logf("Image Handle OK %v", time.Since(start))
 }

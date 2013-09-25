@@ -51,6 +51,12 @@ func sigTrapCloser(l net.Listener) {
 	}()
 }
 
+func makeHandler(im ImageFilter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		imageHandle(w, r, im)
+	}
+}
+
 func setupServer(b backend.ImageBackend) error {
 	// HTTP endpoints
 	imageBackend = b
