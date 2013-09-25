@@ -219,7 +219,8 @@ func imageHandle(w http.ResponseWriter, r *http.Request, f ImageFilter) {
 		return
 	}
 
-	w.Header().Set("Content-Type", mimeType)
+	newMimeType := http.DetectContentType(thumb)
+	w.Header().Set("Content-Type", newMimeType)
 	w.Header().Set("Content-Length", strconv.Itoa(len(thumb)))
 	w.Write(thumb)
 	util.Logf("Image Handle OK %v", time.Since(start))
