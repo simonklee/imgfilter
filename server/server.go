@@ -35,7 +35,8 @@ import (
 )
 
 var (
-	router         *mux.Router
+	router       *mux.Router
+	imageBackend backend.ImageBackend
 )
 
 func sigTrapCloser(l net.Listener) {
@@ -51,12 +52,20 @@ func sigTrapCloser(l net.Listener) {
 	}()
 }
 
-func setupServer(imgBackend backend.ImageBackend) error {
+func makeHandler(im ImageFilter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		imageHandle(w, r, im)
+	}
+}
+
+func setupServer(b backend.ImageBackend) error {
 	// HTTP endpoints
+	imageBackend = b
+
 	router = mux.NewRouter()
-	router.HandleFunc("/crop/", cropHandle).Methods("GET").Name("crop")
-	router.HandleFunc("/resize/", resizeHandle).Methods("GET").Name("resize")
-	router.HandleFunc("/thumbnail/", thumbnailHandle).Methods("GET").Name("thumbnail")
+	router.HandleFunc("/crop/{fileinfo:.*}", makeHandler(NewCropFilter())).Methods("GET").Name("thumbnail")
+	router.HandleFunc("/resize/{fileinfo:.*}", makeHandler(NewResizeFilter())).Methods("GET").Name("thumbnail")
+	router.HandleFunc("/thumbnail/{fileinfo:.*}", makeHandler(NewThumbnailFilter())).Methods("GET").Name("thumbnail")
 	router.StrictSlash(false)
 	http.Handle("/", router)
 

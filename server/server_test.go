@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/simonz05/imgfilter/util"
 	"github.com/simonz05/imgfilter/backend"
+	"github.com/simonz05/imgfilter/util"
 )
 
 var (
