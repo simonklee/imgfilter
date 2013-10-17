@@ -24,7 +24,7 @@ package image
 
 import (
 	"github.com/gographics/imagick/imagick"
-	"github.com/simonz05/imgfilter/util"
+	"github.com/simonz05/util/math"
 )
 
 type Image struct {
@@ -83,9 +83,9 @@ func (im *Image) normalizeOffset(w, h uint, xOffset, yOffset int) (x int, y int)
 	x, y = im.gravity(w, h)
 	x += xOffset
 	y += yOffset
-	x -= util.IntMax(0, x+int(w)-int(im.w))
-	y -= util.IntMax(0, y+int(h)-int(im.h))
-	return util.IntMax(0, x), util.IntMax(0, y)
+	x -= math.IntMax(0, x+int(w)-int(im.w))
+	y -= math.IntMax(0, y+int(h)-int(im.h))
+	return math.IntMax(0, x), math.IntMax(0, y)
 }
 
 // Calculate x and y offset based on gravity. ImageMagick's SetImageGravity

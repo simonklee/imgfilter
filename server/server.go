@@ -30,7 +30,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/simonz05/imgfilter/backend"
-	"github.com/simonz05/imgfilter/util"
+	"github.com/simonz05/util/log"
 )
 
 var (
@@ -46,7 +46,7 @@ func sigTrapCloser(l net.Listener) {
 		for _ = range c {
 			// Once we close the listener the main loop will exit
 			l.Close()
-			util.Logf("Closed listener %s", l.Addr())
+			log.Printf("Closed listener %s", l.Addr())
 		}
 	}()
 }
@@ -82,10 +82,10 @@ func ListenAndServe(laddr string, imgBackend backend.ImageBackend) error {
 		return err
 	}
 
-	util.Logf("Listen on %s", l.Addr())
+	log.Printf("Listen on %s", l.Addr())
 
 	sigTrapCloser(l)
 	err = http.Serve(l, nil)
-	util.Logf("Shutting down ..")
+	log.Printf("Shutting down ..")
 	return err
 }

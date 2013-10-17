@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/simonz05/imgfilter/image"
-	"github.com/simonz05/imgfilter/util"
+	"github.com/simonz05/util/log"
 )
 
 var (
@@ -39,7 +39,7 @@ func validContentType(mime string) error {
 }
 
 func writeError(w http.ResponseWriter, err string, statusCode int) {
-	util.Logf("err: %v", err)
+	log.Printf("err: %v", err)
 	w.WriteHeader(statusCode)
 	w.Write([]byte(err))
 }
@@ -187,7 +187,7 @@ func (t *ResizeFilter) Filter(data []byte, f *FileInfo) ([]byte, error) {
 func imageHandle(w http.ResponseWriter, r *http.Request, f ImageFilter) {
 	start := time.Now()
 	m := mux.Vars(r)
-	util.Logln(m["fileinfo"])
+	log.Println(m["fileinfo"])
 
 	fi, err := f.SizeParser(m["fileinfo"])
 
@@ -196,7 +196,7 @@ func imageHandle(w http.ResponseWriter, r *http.Request, f ImageFilter) {
 		return
 	}
 
-	util.Logln(fi)
+	log.Println(fi)
 
 	data, err := imageBackend.ReadFile(fi.filepath)
 
@@ -223,5 +223,5 @@ func imageHandle(w http.ResponseWriter, r *http.Request, f ImageFilter) {
 	w.Header().Set("Content-Type", newMimeType)
 	w.Header().Set("Content-Length", strconv.Itoa(len(thumb)))
 	w.Write(thumb)
-	util.Logf("Image Handle OK %v", time.Since(start))
+	log.Printf("Image Handle OK %v", time.Since(start))
 }

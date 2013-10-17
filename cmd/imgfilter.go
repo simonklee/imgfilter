@@ -3,21 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"runtime/pprof"
 
 	"github.com/simonz05/imgfilter/backend"
 	"github.com/simonz05/imgfilter/server"
-	"github.com/simonz05/imgfilter/util"
+	"github.com/simonz05/util/log"
 )
 
 var (
-	verbose            = flag.Bool("v", false, "verbose mode")
 	help               = flag.Bool("h", false, "show help text")
 	laddr              = flag.String("http", ":8080", "set bind address for the HTTP server")
-	logLevel           = flag.Int("log", 0, "set log level")
 	version            = flag.Bool("version", false, "show version number and exit")
 	fsBaseDir          = flag.String("fs-base-dir", "", "file system base dir")
 	awsAccessKeyId     = flag.String("aws-access-key-id", "", "AWS access key id")
@@ -56,12 +53,6 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	if *verbose {
-		util.LogLevel = 2
-	} else {
-		util.LogLevel = *logLevel
-	}
-
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -78,13 +69,13 @@ func main() {
 	} else if *awsAccessKeyId != "" && *awsSecretAccessKey != "" && *awsRegion != "" && *awsBucket != "" {
 		imgBackend = backend.NewS3(*awsAccessKeyId, *awsSecretAccessKey, *awsRegion, *awsBucket)
 	} else {
-		util.Errln("Expected either aws-* or fs-* arguments")
+		log.Errorln("Expected either aws-* or fs-* arguments")
 		os.Exit(1)
 	}
 
 	err := server.ListenAndServe(*laddr, imgBackend)
 
 	if err != nil {
-		util.Logln(err)
+		log.Println(err)
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/simonz05/imgfilter/backend"
-	"github.com/simonz05/imgfilter/util"
 )
 
 var (
@@ -21,8 +20,6 @@ var (
 )
 
 func startServer() {
-	util.LogLevel = 0
-
 	fs := NewFileSystem("")
 	err := setupServer("travis@tcp(localhost:3306)/myapp_test?charset=utf8", fs)
 
