@@ -52,9 +52,21 @@ func sigTrapCloser(l net.Listener) {
 	}()
 }
 
-func makeHandler(im ImageFilter) http.HandlerFunc {
+func makeCropHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		imageHandle(w, r, im)
+		imageHandle(w, r, NewCropFilter())
+	}
+}
+
+func makeResizeHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		imageHandle(w, r, NewResizeFilter())
+	}
+}
+
+func makeThumbnailHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		imageHandle(w, r, NewThumbnailFilter())
 	}
 }
 
@@ -63,9 +75,9 @@ func setupServer(b backend.ImageBackend) error {
 	imageBackend = b
 
 	router = mux.NewRouter()
-	router.HandleFunc("/crop/{fileinfo:.*}", makeHandler(NewCropFilter())).Methods("GET").Name("thumbnail")
-	router.HandleFunc("/resize/{fileinfo:.*}", makeHandler(NewResizeFilter())).Methods("GET").Name("thumbnail")
-	router.HandleFunc("/thumbnail/{fileinfo:.*}", makeHandler(NewThumbnailFilter())).Methods("GET").Name("thumbnail")
+	router.HandleFunc("/crop/{fileinfo:.*}", makeCropHandler()).Methods("GET").Name("crop")
+	router.HandleFunc("/resize/{fileinfo:.*}", makeResizeHandler()).Methods("GET").Name("resize")
+	router.HandleFunc("/thumbnail/{fileinfo:.*}", makeThumbnailHandler()).Methods("GET").Name("thumbnail")
 	router.StrictSlash(false)
 	http.Handle("/", router)
 
