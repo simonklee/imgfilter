@@ -22,14 +22,10 @@ Usage:
 
 The flags are:
 
-     -v
-             verbose mode
      -h
              help text
      -http=":8080"
              set bind address for the HTTP server
-     -log=0
-             set log level
      -fs-base-dir="" 
              file system base dir
      -aws-access-key-id=""
@@ -40,6 +36,12 @@ The flags are:
              AWS region
      -aws-bucket=""
              AWS bucket
+     -log=0
+             log level
+     -log-file=""
+             If non-empty, write log to this file
+     -log-raven-dsn=""
+             If non-empty, write to raven dsn
      -version=false
              display version number and exit
      -debug.cpuprofile=""
