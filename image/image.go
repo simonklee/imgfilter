@@ -23,9 +23,21 @@
 package image
 
 import (
+	"sync"
+
 	"github.com/gographics/imagick/imagick"
 	"github.com/simonz05/util/math"
 )
+
+var imgInit sync.Once
+
+func imgInitFn() {
+	imagick.Initialize()
+}
+
+func init() {
+	imgInit.Do(imgInitFn)
+}
 
 type Image struct {
 	mw        *imagick.MagickWand
@@ -46,7 +58,6 @@ type Image struct {
 // 		}
 func NewImageFromBlob(blob []byte) (*Image, error) {
 	im := new(Image)
-	imagick.Initialize()
 
 	im.mw = imagick.NewMagickWand()
 	err := im.mw.ReadImageBlob(blob)
@@ -141,8 +152,14 @@ func (im *Image) cropSize(width, height uint) (uint, uint) {
 
 // Free image resource. Always call this.
 func (im *Image) Destroy() {
+	im.Close()
+}
+
+// Free image resource. Always call this.
+// Implements the io.Closer interface.
+func (im *Image) Close() error {
 	im.mw.Destroy()
-	imagick.Terminate()
+	return nil
 }
 
 // Return width
